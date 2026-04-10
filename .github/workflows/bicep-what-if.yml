@@ -15,10 +15,11 @@ permissions:
 # on every PR that touches `infra/`. It DOES NOT deploy anything — it only
 # previews the change set and posts the diff as a PR comment.
 #
-# It is intentionally optional until `azure-infra-bootstrap` lands the first
-# Bicep modules and the dev subscription has been wired up via federated
-# credentials. Until then the job is a no-op so PRs from contributors without
-# Azure access are not blocked.
+# As of the `azure-infra-bootstrap` change, `infra/main.bicep` is guaranteed
+# to exist on every commit on `main`, so the previous "skip when the entry
+# point does not exist" branch has been removed. The `noop` job remains for
+# the case where `AZURE_DEV_SUBSCRIPTION_ID` is not configured (e.g., for
+# external contributors who do not have access to the dev subscription).
 
 jobs:
   what-if:
@@ -39,20 +40,13 @@ jobs:
         id: whatif
         run: |
           set -euo pipefail
-          if [ ! -f infra/main.bicep ]; then
-            echo "infra/main.bicep does not exist yet — skipping what-if."
-            echo "skipped=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           az deployment sub what-if \
             --location ${{ vars.AZURE_DEV_LOCATION }} \
             --template-file infra/main.bicep \
             --parameters infra/parameters.dev.bicepparam \
             > whatif.txt
-          echo "skipped=false" >> "$GITHUB_OUTPUT"
 
       - name: Comment what-if on PR
-        if: steps.whatif.outputs.skipped == 'false'
         uses: actions/github-script@v7
         with:
           script: |
