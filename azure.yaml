@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# AzureClaw — Azure Developer CLI (azd) project manifest.
+#
+# This file is the contract between the local repo and `azd up`. The
+# infrastructure is described in Bicep under `infra/`. The single
+# `gateway` service is the FastAPI control plane that runs in Container
+# Apps. Additional services (browser MCP sidecar, Durable Functions for
+# cron) land alongside the OpenSpec changes that introduce them.
+#
+# IMPORTANT: this file makes `azd up` *runnable*, not *run*. Provisioning
+# is gated to the `first-deploy-dev` OpenSpec change (#23) behind a
+# manual workflow_dispatch and a required reviewer on the dev-deploy
+# environment.
+
+name: azureclaw
+metadata:
+  template: azureclaw@0.1.0
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+services:
+  gateway:
+    project: ./src/azureclaw
+    language: python
+    host: containerapp
