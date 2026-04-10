@@ -1,0 +1,96 @@
+[project]
+name = "azureclaw"
+version = "0.0.0"
+description = "Azure-native Microsoft Agent Framework re-imagining of OpenClaw."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+authors = [{ name = "AzureClaw contributors" }]
+keywords = [
+    "ai",
+    "agent",
+    "microsoft-agent-framework",
+    "azure",
+    "openclaw",
+    "magentic",
+    "mcp",
+]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Communications :: Chat",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# Runtime dependencies are intentionally empty in the bootstrap commit.
+# They land alongside the modules that need them, in the OpenSpec changes
+# that introduce those modules. See openspec/changes/ for the queue.
+dependencies = []
+
+[project.optional-dependencies]
+# Filled in by later changes — kept here as named extras so installers can opt in.
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "pyright>=1.1.380",
+]
+
+[project.urls]
+Homepage = "https://github.com/calving/AzureClaw"
+Issues = "https://github.com/calving/AzureClaw/issues"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/azureclaw"]
+
+# ──────────────────────────────────────────────────────────────────────
+# Tooling configuration
+# ──────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+    "TID", # flake8-tidy-imports
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["azureclaw"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "local: tests that run with SQLite/in-memory fallbacks (no Azure required)",
+    "azure: tests that hit real Azure resources (gated, run in nightly)",
+    "hybrid: tests that exercise the on-prem connector via loopback mode",
+    "slow: tests that take more than ~5 seconds",
+]

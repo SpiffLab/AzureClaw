@@ -1,0 +1,22 @@
+# AzureClaw code owners.
+#
+# Each line is a file pattern followed by one or more owners.
+# Owners must approve PRs that touch matching files.
+
+# Default owner for everything in the repo
+*                                @calving
+
+# Architecture spec — extra eyes required
+/openspec/project.md             @calving
+/openspec/changes/               @calving
+
+# Azure infrastructure — anything under infra/ is high-impact
+/infra/                          @calving
+/.github/workflows/release.yml   @calving
+/.github/workflows/bicep-what-if.yml @calving
+
+# CI definitions
+/.github/workflows/              @calving
+
+# On-prem connector
+/azureclaw-bridge/               @calving

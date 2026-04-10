@@ -1,0 +1,121 @@
+schema: spec-driven
+
+# Project context — shown to AI assistants when creating OpenSpec artifacts.
+# This is AzureClaw's architectural source of truth. Update it whenever
+# foundational decisions change.
+context: |
+  AzureClaw is a Python-based personal AI assistant inspired by OpenClaw,
+  rebuilt on Microsoft Agent Framework 1.0 and hosted Azure-first. The goal
+  is a multi-channel agent that bridges WhatsApp, Telegram, Discord, iMessage,
+  and Microsoft Teams into a single MAF workflow that orchestrates specialist
+  subagents (Triage, Chat, Magentic-One research team, Scheduler, on-prem
+  workers) under human-in-the-loop approval.
+
+  ──────────────────────────────────────────────────────────────────────
+  CORE DECISIONS (do not change without an OpenSpec change targeting them)
+  ──────────────────────────────────────────────────────────────────────
+  - Language: Python 3.13+, package = "azureclaw"
+  - Agent runtime: Microsoft Agent Framework 1.0 (AIAgent / WorkflowBuilder /
+    MagenticBuilder)
+  - Topology: graph workflow with typed edges, structured-output Triage
+    (Responses API + Pydantic), MagenticBuilder for the research team,
+    concurrent fan-out, shared workflow state, checkpointing + HITL
+    pause/resume
+  - LLM backend: pluggable behind ChatClient; default ordering is
+    Foundry → Anthropic → Ollama via a custom AgentRunMiddleware that does
+    failover on transient errors
+  - Memory: AgentThread persisted to Azure Cosmos DB + a custom
+    ContextProvider backed by Azure AI Search (vector recall) using Azure
+    OpenAI embeddings (text-embedding-3-large)
+  - Tools: MCP servers for browser (Playwright) and canvas; AIFunction tools
+    for cron, channel actions; cron and cross-channel posts are marked
+    require_approval=True
+  - Hosting: Azure Container Apps + Azure Container Registry, fronted by
+    Azure API Management. ALL secrets resolve from Azure Key Vault via
+    Managed Identity (DefaultAzureCredential). Zero env-var keys in prod.
+  - Identity: Microsoft Entra ID for service-to-service AND end-user auth
+  - Observability: OpenTelemetry → Application Insights via
+    azure-monitor-opentelemetry; MAF auto-instruments agent.run, tool.invoke,
+    workflow.superstep, approval.request
+  - Safety: Azure AI Content Safety wired as a FunctionInvocationMiddleware
+  - Approval queue: Azure Service Bus (durable HITL approvals)
+  - Background scheduling: Azure Durable Functions in production; APScheduler
+    in-process is the local-dev fallback
+  - Hybrid (on-prem): Azure Relay Hybrid Connections + an "azureclaw-bridge"
+    daemon that runs at the user's site. Two transport modes: A2A peer
+    (recommended) where a small MAF agent runs on-prem and joins the cloud
+    workflow over A2A through Relay; or MCP bridge (lightweight) where a
+    stdio MCP server is multiplexed through Relay. iMessage is routed via
+    this hybrid layer because Apple credentials must stay on the user's Mac.
+  - A2A interop: gateway exposes A2A endpoints through APIM so external
+    agents can plug in; on-prem peers ride the same A2A protocol.
+  - Cross-runtime fallbacks (for local dev / CI): SQLite for Cosmos,
+    in-memory FAISS-style cosine for AI Search, in-memory asyncio.Queue
+    for Service Bus, local filesystem for Blob Storage, OTel console
+    exporter for App Insights, APScheduler for Durable Functions, Ollama
+    for Foundry. Every Azure dependency MUST have a local fallback path.
+
+  ──────────────────────────────────────────────────────────────────────
+  WHAT IS NOT MICROSOFT AND WHY THAT IS OK
+  ──────────────────────────────────────────────────────────────────────
+  - FastAPI / Pydantic — Microsoft has no Python web framework or type
+    validator; ASP.NET Core would mean dropping the Python decision.
+  - discord.py / python-telegram-bot / pywa / botbuilder-core — Discord,
+    Telegram, WhatsApp, and Teams are external platforms. botbuilder-core
+    IS Microsoft (Bot Framework). For Discord/Telegram/WhatsApp there is
+    no Microsoft SDK.
+  - pytest — no Microsoft Python test runner.
+  - Playwright — already a Microsoft project.
+  - OpenTelemetry, Model Context Protocol — open standards Microsoft
+    co-develops; using them IS the Microsoft option.
+
+  ──────────────────────────────────────────────────────────────────────
+  CHANNEL ADAPTERS
+  ──────────────────────────────────────────────────────────────────────
+  - WhatsApp:  pywa (WA Business Cloud API). Baileys-as-sidecar is a
+                flag-gated alternative for self-hosters.
+  - Telegram:  python-telegram-bot v21+ (async), webhook mode in prod
+  - Discord:   discord.py v2.x, gateway WS
+  - iMessage:  cloud adapter is a thin shim that talks via A2A to the
+                "site-mac" peer (azureclaw-bridge running BlueBubbles on
+                the user's Mac). Apple credentials never cross the LAN.
+  - Teams:     botbuilder-core + Azure Bot Service, Adaptive Card approvals,
+                Entra SSO for requesting-user OID
+
+  ──────────────────────────────────────────────────────────────────────
+  DEV PROCESS
+  ──────────────────────────────────────────────────────────────────────
+  - Every meaningful change lands as an OpenSpec change folder
+    (openspec/changes/<name>/) reviewed via PR before code is written.
+  - CI gates: ci/lint (ruff + pyright), ci/test (pytest -m local), and
+    ci/bicep-validate (every infra/**/*.bicep file builds).
+  - Bicep what-if runs on PRs that touch infra/, posting the diff as a
+    PR comment. Until the Azure dev subscription is wired, the job is a
+    no-op so external contributors are not blocked.
+  - The release workflow (azd up) is gated behind a manual workflow_dispatch
+    AND a required reviewer on the dev-deploy / prod-deploy environments.
+    NOTHING is deployed until OpenSpec changes #1-3 (repo-init,
+    bootstrap-skeleton, azure-infra-bootstrap) have merged.
+  - Branch protection on main requires: 1 approval, ci/lint + ci/test +
+    ci/bicep-validate green, no force pushes.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - State the WHY in the first paragraph; defer HOW to design.md
+    - The Capabilities section is the contract — every capability listed
+      here must get a matching specs/<capability>/spec.md
+  design:
+    - Always include a "Decisions" section with rationale, not just
+      conclusions
+    - Note which Microsoft / Azure services are being used and why
+      they were chosen over alternatives
+  specs:
+    - Use SHALL / MUST for normative requirements
+    - Every requirement MUST have at least one #### Scenario block
+    - Scenarios are testable — each one is a candidate test case in
+      `tests/`
+  tasks:
+    - Tasks must be small enough to complete in one session
+    - Order tasks by dependency (what must be done first?)
+    - Group tasks under ## numbered headings; checkboxes use `- [ ]`

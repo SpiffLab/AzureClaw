@@ -1,0 +1,69 @@
+name: release
+
+# Manual deployment workflow. This is the ONLY path that performs `azd up`
+# against an Azure subscription. Triggering it requires:
+#   1. A maintainer manually firing workflow_dispatch
+#   2. The selected environment (dev / prod) approving via its required reviewer
+#
+# Until the `azure-infra-bootstrap` and `first-deploy-dev` OpenSpec changes
+# land, this workflow is wired but inert — `azd up` is gated behind a guard
+# step that fails fast if the infra has not yet been committed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+      confirm:
+        description: 'Type the environment name to confirm (e.g. "dev")'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}-deploy
+    if: ${{ inputs.environment == inputs.confirm }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — block deploys until infra has landed
+        run: |
+          if [ ! -f infra/main.bicep ]; then
+            echo "::error::infra/main.bicep does not exist."
+            echo "::error::The 'azure-infra-bootstrap' OpenSpec change must land before any deploy."
+            exit 1
+          fi
+
+      - name: Azure login (federated)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install azd
+        uses: Azure/setup-azd@v1.0.0
+
+      - name: azd provision (no app deploy yet)
+        env:
+          AZURE_ENV_NAME: ${{ inputs.environment }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: azd provision --no-prompt
+
+      - name: azd deploy (only after provision succeeds)
+        env:
+          AZURE_ENV_NAME: ${{ inputs.environment }}
+        run: azd deploy --no-prompt

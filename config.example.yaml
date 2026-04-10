@@ -1,0 +1,134 @@
+# AzureClaw example configuration.
+#
+# This file is the contract between the operator and the gateway. Every section
+# below maps to a module under `src/azureclaw/`. Values prefixed with `@kv:` are
+# resolved from Azure Key Vault at startup via the Managed Identity attached to
+# the Container App.
+#
+# To use this file:
+#   cp config.example.yaml config.yaml
+#   # then edit. Never commit config.yaml.
+
+environment: dev          # dev | prod | local
+
+# ──────────────────────────────────────────────────────────────────────
+# LLM providers — ordered, first one wins; failover middleware advances
+# down the list on transient errors. Foundry is the Microsoft default.
+# ──────────────────────────────────────────────────────────────────────
+providers:
+  - kind: foundry
+    endpoint: https://<your-foundry>.services.ai.azure.com/api/projects/<project>
+    model: gpt-5.4-mini
+    credential: managed_identity
+  - kind: anthropic
+    model: claude-opus-4-6
+    api_key: "@kv:anthropic-api-key"
+  - kind: ollama
+    base_url: http://localhost:11434
+    model: llama3.3
+
+embeddings:
+  kind: azure_openai
+  endpoint: https://<your-foundry>.services.ai.azure.com
+  model: text-embedding-3-large
+  credential: managed_identity
+
+# ──────────────────────────────────────────────────────────────────────
+# Memory backend
+# ──────────────────────────────────────────────────────────────────────
+memory:
+  backend: cosmos_aisearch         # cosmos_aisearch | sqlite
+  cosmos:
+    endpoint: https://<acct>.documents.azure.com:443/
+    database: azureclaw
+    threads_container: threads
+    checkpoints_container: checkpoints
+    audit_container: audit
+  ai_search:
+    endpoint: https://<svc>.search.windows.net
+    index_name: azureclaw-memory
+  recall:
+    top_k: 8
+    raw_turn_window: 12
+
+# ──────────────────────────────────────────────────────────────────────
+# Channel adapters — comment out the ones you do not want enabled
+# ──────────────────────────────────────────────────────────────────────
+channels:
+  whatsapp:
+    enabled: false
+    transport: business_api        # business_api | baileys_sidecar
+    phone_number_id: "@kv:whatsapp-phone-number-id"
+    access_token: "@kv:whatsapp-access-token"
+    webhook_verify_token: "@kv:whatsapp-webhook-verify-token"
+  telegram:
+    enabled: false
+    bot_token: "@kv:telegram-bot-token"
+    webhook_url: https://<your-apim>.azure-api.net/webhooks/telegram
+  discord:
+    enabled: false
+    bot_token: "@kv:discord-bot-token"
+  imessage:
+    enabled: false
+    site_id: mac                   # references a registered on-prem site
+  teams:
+    enabled: false
+    app_id: "@kv:teams-bot-app-id"
+    app_password: "@kv:teams-bot-app-password"
+
+# ──────────────────────────────────────────────────────────────────────
+# Tools
+# ──────────────────────────────────────────────────────────────────────
+tools:
+  browser:
+    enabled: true
+    transport: mcp_stdio_sidecar    # runs as a sidecar container in ACA
+  canvas:
+    enabled: true
+    blob_account: "@kv:canvas-blob-account"
+    blob_container: canvas
+  cron:
+    enabled: true
+    require_approval: true
+    backend: durable_functions      # durable_functions | apscheduler
+  channel_actions:
+    require_approval_cross_channel: true
+
+# ──────────────────────────────────────────────────────────────────────
+# Safety / content filtering
+# ──────────────────────────────────────────────────────────────────────
+safety:
+  provider: azure_content_safety
+  endpoint: https://<svc>.cognitiveservices.azure.com
+  thresholds:
+    hate: medium
+    self_harm: medium
+    sexual: medium
+    violence: medium
+  block_jailbreak_attempts: true
+
+# ──────────────────────────────────────────────────────────────────────
+# Observability
+# ──────────────────────────────────────────────────────────────────────
+observability:
+  enabled: true
+  app_insights_connection_string: "@kv:app-insights-connection-string"
+  console_fallback: false
+
+# ──────────────────────────────────────────────────────────────────────
+# Hybrid / on-prem connectivity (Azure Relay Hybrid Connections)
+# ──────────────────────────────────────────────────────────────────────
+hybrid:
+  enabled: false
+  relay:
+    namespace: <your-relay>.servicebus.windows.net
+  sites_container: sites             # in Cosmos DB
+  default_approval_policy: confirm_all_writes
+
+# ──────────────────────────────────────────────────────────────────────
+# A2A interop
+# ──────────────────────────────────────────────────────────────────────
+a2a:
+  enabled: false
+  public_endpoint: https://<your-apim>.azure-api.net/a2a
+  rate_limit_per_minute: 60

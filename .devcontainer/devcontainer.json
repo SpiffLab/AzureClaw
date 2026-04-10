@@ -1,0 +1,42 @@
+{
+    "name": "AzureClaw",
+    "image": "mcr.microsoft.com/devcontainers/python:1-3.13-bookworm",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "20"
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/azure-cli:1": {},
+        "ghcr.io/azure/azure-dev/azd:latest": {},
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+        "ghcr.io/devcontainers-contrib/features/bicep:1": {}
+    },
+    "postCreateCommand": "pipx install uv && uv sync --all-extras || true",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "charliermarsh.ruff",
+                "ms-azuretools.vscode-bicep",
+                "ms-azuretools.vscode-docker",
+                "ms-azuretools.azure-dev",
+                "github.vscode-github-actions",
+                "tamasfe.even-better-toml",
+                "redhat.vscode-yaml"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+                "python.testing.pytestEnabled": true,
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.organizeImports": "explicit"
+                    }
+                }
+            }
+        }
+    },
+    "remoteUser": "vscode"
+}

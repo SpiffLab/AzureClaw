@@ -1,0 +1,75 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: ci/lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Sync dependencies
+        run: uv sync --all-extras
+      - name: Ruff check
+        run: uv run ruff check src tests
+      - name: Ruff format check
+        run: uv run ruff format --check src tests
+      - name: Pyright
+        run: uv run pyright
+
+  test:
+    name: ci/test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Sync dependencies
+        run: uv sync --all-extras
+      - name: Run local-marker tests (no Azure required)
+        run: uv run pytest -m local --maxfail=1 -q
+
+  bicep-validate:
+    name: ci/bicep-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Bicep
+        run: |
+          curl -Lo bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x bicep
+          sudo mv bicep /usr/local/bin/bicep
+          bicep --version
+      - name: Bicep build (validates syntax + types of all modules)
+        run: |
+          shopt -s globstar nullglob
+          if compgen -G "infra/**/*.bicep" > /dev/null; then
+            for f in infra/**/*.bicep; do
+              echo "::group::bicep build $f"
+              bicep build "$f" --stdout > /dev/null
+              echo "::endgroup::"
+            done
+          else
+            echo "No Bicep files yet — skipping (will become a hard requirement once infra/ lands)."
+          fi

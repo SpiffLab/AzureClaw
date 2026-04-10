@@ -1,0 +1,38 @@
+# Normalize line endings on commit; check out native
+* text=auto
+
+# Always LF — these are interpreted by tooling that expects Unix endings
+*.sh           text eol=lf
+*.bash         text eol=lf
+Dockerfile     text eol=lf
+*.dockerfile   text eol=lf
+*.py           text eol=lf
+*.toml         text eol=lf
+*.yaml         text eol=lf
+*.yml          text eol=lf
+*.json         text eol=lf
+*.md           text eol=lf
+*.bicep        text eol=lf
+*.bicepparam   text eol=lf
+LICENSE        text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# Always CRLF — Windows-only files
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.7z    binary
+*.woff  binary
+*.woff2 binary
