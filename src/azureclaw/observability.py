@@ -34,6 +34,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from azureclaw.azure.keyvault import KeyVaultClientLike
     from azureclaw.config import AzureClawConfig
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,10 @@ logger = logging.getLogger(__name__)
 _setup_called: bool = False
 
 
-def setup_observability(config: AzureClawConfig) -> None:
+def setup_observability(
+    config: AzureClawConfig,
+    kv_client: KeyVaultClientLike | None = None,
+) -> None:
     """Configure the OpenTelemetry pipeline for the current process.
 
     Idempotent. Calling more than once is a no-op + debug log.
@@ -55,6 +59,15 @@ def setup_observability(config: AzureClawConfig) -> None:
             The function reads `config.environment` and
             `config.observability.app_insights_connection_string` to
             decide which branch to take.
+        kv_client: An optional :class:`KeyVaultClientLike` used to
+            resolve ``@kv:`` connection-string placeholders into the
+            real Application Insights connection string. When ``None``
+            (the default for backward compatibility), ``@kv:`` strings
+            fall through to the console exporter with a warning. When
+            provided AND the environment is ``"dev"`` or ``"prod"``,
+            ``@kv:`` strings are resolved through the client; resolution
+            failures log a warning and fall back to console without
+            raising.
     """
     global _setup_called
 
@@ -71,6 +84,29 @@ def setup_observability(config: AzureClawConfig) -> None:
         return
 
     connection_string = obs_cfg.app_insights_connection_string
+
+    # ─── @kv: resolution (only in non-local mode with a kv_client) ────
+    # Local mode is hermetic by contract — never call out to KV even if
+    # a populated client is provided. dev/prod modes attempt resolution
+    # and fall back to console on failure (no raise).
+    if (
+        config.environment in ("dev", "prod")
+        and kv_client is not None
+        and connection_string is not None
+        and connection_string.startswith("@kv:")
+    ):
+        from azureclaw.azure.keyvault import resolve_kv_pointer
+
+        try:
+            connection_string = resolve_kv_pointer(connection_string, kv_client)
+        except Exception as exc:
+            logger.warning(
+                "failed to resolve App Insights connection string from Key Vault: %s; "
+                "falling back to the console exporter.",
+                exc,
+            )
+            connection_string = None
+
     has_real_connection_string = (
         connection_string is not None
         and connection_string != ""
@@ -115,9 +151,8 @@ def setup_observability(config: AzureClawConfig) -> None:
 
     if connection_string is not None and connection_string.startswith("@kv:"):
         logger.warning(
-            "App Insights connection string is the placeholder %r; "
-            "Key Vault resolution lands in llm-failover-middleware. "
-            "Falling back to the console exporter.",
+            "App Insights connection string is the placeholder %r and no kv_client "
+            "was provided to resolve it; falling back to the console exporter.",
             connection_string,
         )
     elif config.environment in ("dev", "prod"):

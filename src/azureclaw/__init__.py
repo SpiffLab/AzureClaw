@@ -19,6 +19,7 @@ from azureclaw.gateway.envelope import (
     ChannelMessage,
 )
 from azureclaw.gateway.hub import GatewayHub
+from azureclaw.llm import FailoverChatClient, ProviderExhausted, build_chat_client
 from azureclaw.observability import setup_observability
 
 __all__ = [
@@ -27,8 +28,11 @@ __all__ = [
     "AzureClawConfig",
     "ChannelAdapter",
     "ChannelMessage",
+    "FailoverChatClient",
     "GatewayHub",
+    "ProviderExhausted",
     "__version__",
+    "build_chat_client",
     "create_app",
     "setup_observability",
 ]
