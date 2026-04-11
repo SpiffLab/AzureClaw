@@ -27,12 +27,18 @@ classifiers = [
 
 # Runtime dependencies land alongside the modules that need them, in the
 # OpenSpec changes that introduce those modules. See openspec/changes/ for
-# the queue. The four below are foundational and used by every later change.
+# the queue.
 dependencies = [
+    # Foundational — bootstrap-skeleton (OpenSpec change #2)
     "pydantic>=2.5,<3",
     "pydantic-settings>=2.5,<3",
     "PyYAML>=6",
     "azure-identity>=1.19,<2",
+    # Microsoft Agent Framework + Application Insights — observability-appinsights (OpenSpec change #4)
+    # We pull only `agent-framework-core` (~30 transitive packages) instead of the umbrella
+    # `agent-framework` (~150+); each later change adds the per-provider subpackage it needs.
+    "agent-framework-core>=1.0,<2",
+    "azure-monitor-opentelemetry>=1.8,<2",
 ]
 
 [project.optional-dependencies]

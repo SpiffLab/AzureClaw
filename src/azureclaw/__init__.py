@@ -7,7 +7,12 @@ lands incrementally through subsequent OpenSpec changes under
 """
 
 from azureclaw.config import AzureClawConfig
+from azureclaw.observability import setup_observability
 
 __version__ = "0.0.0"
 
-__all__ = ["AzureClawConfig", "__version__"]
+__all__ = [
+    "AzureClawConfig",
+    "__version__",
+    "setup_observability",
+]
