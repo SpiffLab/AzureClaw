@@ -44,6 +44,18 @@ dependencies = [
     "fastapi>=0.115,<1",
     "uvicorn[standard]>=0.32,<1",
     "httpx>=0.28,<1",
+    # LLM provider stack + Key Vault — llm-failover-middleware (OpenSpec change #6)
+    # agent-framework-anthropic is currently a beta release; pinned to >= a known working
+    # version. agent-framework-openai is pulled in transitively via -foundry; we use it
+    # directly for the Ollama path (custom base_url).
+    "agent-framework-foundry>=1.0,<2",
+    "agent-framework-anthropic>=1.0.0b260409,<2",
+    "azure-keyvault-secrets>=4.10,<5",
+    # azure-core's async transport optionally imports aiohttp; FoundryChatClient
+    # constructs an azure-core async pipeline at instantiation time which fails
+    # with ModuleNotFoundError if aiohttp isn't installed. Pinning it here makes
+    # the requirement explicit.
+    "aiohttp>=3.10,<4",
 ]
 
 [project.optional-dependencies]

@@ -14,6 +14,7 @@ import pytest
 
 import azureclaw
 from azureclaw import AzureClawConfig, setup_observability
+from azureclaw.azure.keyvault import _LocalStubKeyVaultClient  # pyright: ignore[reportPrivateUsage]
 from azureclaw.config import ObservabilityConfig
 
 
@@ -218,3 +219,76 @@ def test_idempotency_holds_across_config_changes(
     assert len(patched_otel["configure_otel_providers"]) == 1
     assert patched_otel["configure_azure_monitor"] == []
     assert patched_otel["enable_instrumentation"] == []
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Key Vault @kv: resolution (added by llm-failover-middleware, change #6)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.local
+def test_kv_pointer_in_dev_with_populated_kv_takes_azure_monitor_branch(
+    patched_otel: dict[str, list[Any]],
+) -> None:
+    real_cs = (
+        "InstrumentationKey=00000000-0000-0000-0000-000000000000;"
+        "IngestionEndpoint=https://westus2-0.in.applicationinsights.azure.com/"
+    )
+    kv = _LocalStubKeyVaultClient(secrets={"app-insights-connection-string": real_cs})
+    cfg = AzureClawConfig(
+        environment="dev",
+        observability=ObservabilityConfig(
+            enabled=True,
+            app_insights_connection_string="@kv:app-insights-connection-string",
+        ),
+    )
+
+    setup_observability(cfg, kv_client=kv)
+
+    # The resolved string takes the Azure Monitor branch.
+    assert len(patched_otel["configure_azure_monitor"]) == 1
+    assert patched_otel["configure_azure_monitor"][0] == {"connection_string": real_cs}
+    assert len(patched_otel["enable_instrumentation"]) == 1
+    assert patched_otel["configure_otel_providers"] == []
+
+
+@pytest.mark.local
+def test_kv_pointer_resolution_failure_falls_back_to_console(
+    patched_otel: dict[str, list[Any]],
+) -> None:
+    """A KV miss must NOT crash the gateway; it falls back to console."""
+    kv = _LocalStubKeyVaultClient()  # empty — secret missing
+    cfg = AzureClawConfig(
+        environment="dev",
+        observability=ObservabilityConfig(
+            enabled=True,
+            app_insights_connection_string="@kv:app-insights-connection-string",
+        ),
+    )
+
+    setup_observability(cfg, kv_client=kv)  # MUST NOT raise
+
+    assert len(patched_otel["configure_otel_providers"]) == 1
+    assert patched_otel["configure_azure_monitor"] == []
+
+
+@pytest.mark.local
+def test_kv_pointer_in_local_mode_is_not_resolved_even_with_kv_client(
+    patched_otel: dict[str, list[Any]],
+) -> None:
+    """Local mode is hermetic by contract — never call KV even when populated."""
+    real_cs = "InstrumentationKey=...;IngestionEndpoint=https://example/"
+    kv = _LocalStubKeyVaultClient(secrets={"app-insights-connection-string": real_cs})
+    cfg = AzureClawConfig(
+        environment="local",
+        observability=ObservabilityConfig(
+            enabled=True,
+            app_insights_connection_string="@kv:app-insights-connection-string",
+        ),
+    )
+
+    setup_observability(cfg, kv_client=kv)
+
+    # Local takes the console branch unconditionally.
+    assert len(patched_otel["configure_otel_providers"]) == 1
+    assert patched_otel["configure_azure_monitor"] == []

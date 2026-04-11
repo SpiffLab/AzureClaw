@@ -29,6 +29,8 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+from azureclaw.azure.credential import build_credential
+from azureclaw.azure.keyvault import build_keyvault_client
 from azureclaw.config import AzureClawConfig
 from azureclaw.gateway.hub import GatewayHub
 from azureclaw.gateway.routes import router as core_router
@@ -38,16 +40,38 @@ from azureclaw.observability import setup_observability
 def create_app(config: AzureClawConfig) -> FastAPI:
     """Build a fresh :class:`FastAPI` instance for the given config.
 
-    The returned app's lifespan will call
-    :func:`azureclaw.setup_observability` with ``config`` at startup
-    and attach a new :class:`GatewayHub` to ``app.state.hub``.
+    The returned app's lifespan:
+
+    - builds an Azure ``TokenCredential`` (real ``DefaultAzureCredential``
+      for dev/prod, hermetic stub for local)
+    - builds a :class:`KeyVaultClientLike` (real ``SecretClient`` wrapper
+      when a vault URI is configured, hermetic stub otherwise — the
+      stub is the only branch reachable until ``key_vault.uri`` lands
+      on the config schema in a future change)
+    - calls :func:`azureclaw.setup_observability` with the kv_client
+      so ``@kv:`` connection strings are resolved before the local-vs-
+      Azure-Monitor branch is decided
+    - attaches a fresh :class:`GatewayHub`, the config, the credential,
+      and the kv_client to ``app.state`` for downstream routes
     """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        setup_observability(config)
+        credential = build_credential(config.environment)
+        # vault_uri stays None until a future change adds a top-level
+        # `key_vault.uri` field to AzureClawConfig. Until then, every
+        # environment gets the in-memory stub.
+        kv_client = build_keyvault_client(
+            vault_uri=None,
+            environment=config.environment,
+            credential=credential,
+        )
+        setup_observability(config, kv_client=kv_client)
+
         app.state.hub = GatewayHub()
         app.state.config = config
+        app.state.credential = credential
+        app.state.kv_client = kv_client
         try:
             yield
         finally:
