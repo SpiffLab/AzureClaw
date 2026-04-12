@@ -21,6 +21,15 @@ from azureclaw.gateway.envelope import (
 from azureclaw.gateway.hub import GatewayHub
 from azureclaw.llm import FailoverChatClient, ProviderExhausted, build_chat_client
 from azureclaw.observability import setup_observability
+from azureclaw.orchestrator import Orchestrator
+from azureclaw.orchestrator.intents import (
+    Intent,
+    IntentChat,
+    IntentOnPrem,
+    IntentResearch,
+    IntentSchedule,
+    TriageDecision,
+)
 
 __all__ = [
     "AgentEvent",
@@ -30,7 +39,14 @@ __all__ = [
     "ChannelMessage",
     "FailoverChatClient",
     "GatewayHub",
+    "Intent",
+    "IntentChat",
+    "IntentOnPrem",
+    "IntentResearch",
+    "IntentSchedule",
+    "Orchestrator",
     "ProviderExhausted",
+    "TriageDecision",
     "__version__",
     "build_chat_client",
     "create_app",
