@@ -25,3 +25,10 @@ class ChatService(Protocol):
     """Produces a conversational reply for a chat-intent message."""
 
     async def respond(self, text: str, session_id: str) -> str: ...
+
+
+@runtime_checkable
+class ResearchService(Protocol):
+    """Researches a query (optionally browsing a URL) and returns a summary."""
+
+    async def research(self, query: str, url: str | None) -> str: ...

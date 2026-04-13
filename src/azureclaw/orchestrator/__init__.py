@@ -14,8 +14,12 @@ from azureclaw.orchestrator.intents import (
     TriageDecision,
 )
 from azureclaw.orchestrator.orchestrator import Orchestrator
-from azureclaw.orchestrator.services import ChatService, TriageService
-from azureclaw.orchestrator.stubs import StubChatService, StubTriageService
+from azureclaw.orchestrator.services import ChatService, ResearchService, TriageService
+from azureclaw.orchestrator.stubs import (
+    StubChatService,
+    StubResearchService,
+    StubTriageService,
+)
 
 __all__ = [
     "ChatService",
@@ -25,7 +29,9 @@ __all__ = [
     "IntentResearch",
     "IntentSchedule",
     "Orchestrator",
+    "ResearchService",
     "StubChatService",
+    "StubResearchService",
     "StubTriageService",
     "TriageDecision",
     "TriageService",

@@ -56,6 +56,10 @@ dependencies = [
     # with ModuleNotFoundError if aiohttp isn't installed. Pinning it here makes
     # the requirement explicit.
     "aiohttp>=3.10,<4",
+    # Multi-agent orchestration patterns — magentic-research-team (OpenSpec change #8)
+    # Contains MagenticBuilder (Magentic-One), GroupChatBuilder, HandoffBuilder,
+    # SequentialBuilder, ConcurrentBuilder. Just 1 package on top of -core.
+    "agent-framework-orchestrations>=1.0.0b260409,<2",
 ]
 
 [project.optional-dependencies]
