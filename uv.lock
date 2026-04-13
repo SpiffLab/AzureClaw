@@ -59,6 +59,18 @@ wheels = [
 ]
 
 [[package]]
+name = "agent-framework-orchestrations"
+version = "1.0.0b260409"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "agent-framework-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/e7/62b673ef3a16b157edf565b25bd4aa5cad2f7a2ae46ff0a21b46a572f8d4/agent_framework_orchestrations-1.0.0b260409.tar.gz", hash = "sha256:5146410546233eafefb4deaf404935f6d3d772a085e341325b7b644b5223927a", size = 54730, upload-time = "2026-04-10T03:26:26.238Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/4e/71832dd59764c79198f06b732dcf185d1296e970ef3ce55df9e8652b6e18/agent_framework_orchestrations-1.0.0b260409-py3-none-any.whl", hash = "sha256:361d65b6bfbb571b49428e0627637dc92fd3f56f3b5e1f1bbe8d32378c5aa24b", size = 60863, upload-time = "2026-04-10T03:30:48.787Z" },
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -365,6 +377,7 @@ dependencies = [
     { name = "agent-framework-anthropic" },
     { name = "agent-framework-core" },
     { name = "agent-framework-foundry" },
+    { name = "agent-framework-orchestrations" },
     { name = "aiohttp" },
     { name = "azure-identity" },
     { name = "azure-keyvault-secrets" },
@@ -390,6 +403,7 @@ requires-dist = [
     { name = "agent-framework-anthropic", specifier = ">=1.0.0b260409,<2" },
     { name = "agent-framework-core", specifier = ">=1.0,<2" },
     { name = "agent-framework-foundry", specifier = ">=1.0,<2" },
+    { name = "agent-framework-orchestrations", specifier = ">=1.0.0b260409,<2" },
     { name = "aiohttp", specifier = ">=3.10,<4" },
     { name = "azure-identity", specifier = ">=1.19,<2" },
     { name = "azure-keyvault-secrets", specifier = ">=4.10,<5" },

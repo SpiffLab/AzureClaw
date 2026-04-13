@@ -27,3 +27,13 @@ class StubChatService:
 
     async def respond(self, text: str, session_id: str) -> str:
         return self._reply
+
+
+class StubResearchService:
+    """Returns a canned research result for every input."""
+
+    def __init__(self, result: str = "stub-research-result") -> None:
+        self._result = result
+
+    async def research(self, query: str, url: str | None) -> str:
+        return self._result

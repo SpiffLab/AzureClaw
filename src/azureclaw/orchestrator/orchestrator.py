@@ -24,7 +24,7 @@ from azureclaw.orchestrator.intents import (
     IntentResearch,
     IntentSchedule,
 )
-from azureclaw.orchestrator.services import ChatService, TriageService
+from azureclaw.orchestrator.services import ChatService, ResearchService, TriageService
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +37,12 @@ class Orchestrator:
         triage: TriageService,
         chat: ChatService,
         hub: GatewayHub,
+        research: ResearchService | None = None,
     ) -> None:
         self._triage = triage
         self._chat = chat
         self._hub = hub
+        self._research = research
 
     async def start(self) -> None:
         """Subscribe to the hub's inbound channel."""
@@ -101,18 +103,29 @@ class Orchestrator:
                 )
             )
         elif isinstance(intent, IntentResearch):
-            await self._hub.publish_outbound(
-                AgentEvent(
-                    event_type="completed",
-                    channel=msg.channel,
-                    session_id=msg.session_id,
-                    payload={
-                        "stub": True,
-                        "change_ref": "magentic-research-team",
-                        "intent": intent.model_dump(),
-                    },
+            if self._research is not None:
+                result = await self._research.research(intent.query, intent.url)
+                await self._hub.publish_outbound(
+                    AgentEvent(
+                        event_type="completed",
+                        channel=msg.channel,
+                        session_id=msg.session_id,
+                        payload={"text": result},
+                    )
                 )
-            )
+            else:
+                await self._hub.publish_outbound(
+                    AgentEvent(
+                        event_type="completed",
+                        channel=msg.channel,
+                        session_id=msg.session_id,
+                        payload={
+                            "stub": True,
+                            "change_ref": "magentic-research-team",
+                            "intent": intent.model_dump(),
+                        },
+                    )
+                )
         elif isinstance(intent, IntentOnPrem):  # pyright: ignore[reportUnnecessaryIsInstance]
             await self._hub.publish_outbound(
                 AgentEvent(
